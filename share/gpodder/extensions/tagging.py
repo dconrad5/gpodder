@@ -203,23 +203,20 @@ class Mp4File(AudioFile):
         super(Mp4File, self).__init__(filename, album, title, subtitle, genre, pubDate, cover)
     
     def extract_coverart(self):
-        # TODO: mp4file extract_coverart
+        # TODO: implement mp4file extract_coverart
         return None
 
     def insert_coverart(self, image=None, mimetype=None):
-        # TODO: mp4file insert_coverart
         audio = File(self.filename)
 
-        if self.cover.endswith('png'):
-            cover_format = MP4Cover.FORMAT_PNG
-        else:
-            cover_format = MP4Cover.FORMAT_JPEG
+        if image is not None and mimetype is not None:
+            if mimetype.endswith('png'):
+                cover_format = MP4Cover.FORMAT_PNG
+            else:
+                cover_format = MP4Cover.FORMAT_JPEG
 
-        with open(self.cover, 'rb') as f:
-            data = f.read()
-        audio.tags['covr'] = [MP4Cover(data, cover_format)]
-        audio.save()
-
+            audio.tags['covr'] = [MP4Cover(image, cover_format)]
+            audio.save()
 
 class Mp3File(AudioFile):
     def __init__(self, filename, album, title, subtitle, genre, pubDate, cover):
