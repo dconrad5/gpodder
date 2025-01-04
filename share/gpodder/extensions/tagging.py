@@ -84,15 +84,15 @@ DefaultConfig = {
     'write_pubdate': True,
 }
 
+
 class AudioFile(object):
-    def __init__(self, filename, album, title, subtitle, genre, pubDate, cover):
+    def __init__(self, filename, album, title, subtitle, genre, pubDate):
         self.filename = filename
         self.album = album
         self.title = title
         self.subtitle = subtitle
         self.genre = genre
         self.pubDate = pubDate
-        self.cover = cover
 
     def remove_tags(self):
         audio = File(self.filename, easy=True)
@@ -149,7 +149,7 @@ class AudioFile(object):
         else:
             # Not actually audio
             audio.save()
-    
+
     def extract_coverart(self):
         """Implement the cover art logic in the subclass."""
         None
@@ -173,9 +173,10 @@ class AudioFile(object):
 
         return p
 
+
 class OggFile(AudioFile):
-    def __init__(self, filename, album, title, subtitle, genre, pubDate, cover):
-        super(OggFile, self).__init__(filename, album, title, subtitle, genre, pubDate, cover)
+    def __init__(self, filename, album, title, subtitle, genre, pubDate):
+        super(OggFile, self).__init__(filename, album, title, subtitle, genre, pubDate)
 
     def extract_coverart(self):
         audio = File(self.filename, easy=True)
@@ -198,10 +199,11 @@ class OggFile(AudioFile):
             audio['METADATA_BLOCK_PICTURE'] = b64encoded.decode("ascii")
             audio.save()
 
+
 class Mp4File(AudioFile):
-    def __init__(self, filename, album, title, subtitle, genre, pubDate, cover):
-        super(Mp4File, self).__init__(filename, album, title, subtitle, genre, pubDate, cover)
-    
+    def __init__(self, filename, album, title, subtitle, genre, pubDate):
+        super(Mp4File, self).__init__(filename, album, title, subtitle, genre, pubDate)
+
     def extract_coverart(self):
         # TODO: implement mp4file extract_coverart
         return None
@@ -218,10 +220,11 @@ class Mp4File(AudioFile):
             audio.tags['covr'] = [MP4Cover(image, cover_format)]
             audio.save()
 
+
 class Mp3File(AudioFile):
-    def __init__(self, filename, album, title, subtitle, genre, pubDate, cover):
-        super(Mp3File, self).__init__(filename, album, title, subtitle, genre, pubDate, cover)
-    
+    def __init__(self, filename, album, title, subtitle, genre, pubDate):
+        super(Mp3File, self).__init__(filename, album, title, subtitle, genre, pubDate)
+
     def extract_coverart(self):
         tags = ID3(self.filename)
         try:
@@ -266,7 +269,7 @@ class gPodderExtension:
 
     def on_episode_downloaded(self, episode):
         # Ensure we're within the bounds of the list
-        if self.container.config.episode_coverart_filetype > len(self.art_filetypes)-1:
+        if self.container.config.episode_coverart_filetype > (len(self.art_filetypes) - 1):
             self.container.config.episode_coverart_filetype = 0
 
         config_filetype = self.art_filetypes[self.container.config.episode_coverart_filetype].upper()
@@ -274,7 +277,7 @@ class gPodderExtension:
         info = self.read_episode_info(episode)
         if info['filename'] is None:
             return
-        
+
         extracted_image = self.get_embeddedart(info, episode)
         channel_image_filename = self.get_channelart(episode.channel)
         try:
@@ -298,24 +301,20 @@ class gPodderExtension:
             if self.container.config.normalize_coverart:
                 # normalize artwork regardless of source
                 embed_img = self.normalize_image(embed_img, config_filetype)
-            
+
             # find imagetype and mimetype regardless of source or normalization status
             if embed_img is not None:
                 with Image.open(BytesIO(embed_img)) as img:
                     image_filetype = img.format.upper()
 
-                mimetype = mimetypes.guess_type('x.'+image_filetype.lower(), strict=False)[0]
+                mimetype = mimetypes.guess_type('x.' + image_filetype.lower(), strict=False)[0]
                 logger.info("image mimetype %s", mimetype)
 
         self.write_info2file(info, episode, embed_img, mimetype)
 
     def get_audio(self, info, episode):
         audio = None
-        cover = None
         audioClass = None
-
-        if self.container.config.embed_coverart:
-            cover = self.get_channelart(episode.channel)
 
         if info['filename'].endswith('.mp3'):
             audioClass = Mp3File
@@ -333,15 +332,14 @@ class gPodderExtension:
                 info['title'],
                 info['subtitle'],
                 info['genre'],
-                info['pubDate'],
-                cover)
+                info['pubDate'])
         return audio
 
     # extract coverart from episode, if exists
     def get_embeddedart(self, info, episode):
         audio = self.get_audio(info, episode)
         return audio.extract_coverart()
-    
+
     # takes a raw bytes obj, returns a raw bytes obj
     def normalize_image(self, bytesimg, filetype):
         size = int(self.container.config.episode_coverart_size)
@@ -350,7 +348,7 @@ class gPodderExtension:
                 out = img.resize((size, size))
             else:
                 out = img.copy()
-        
+
         bytesimg = BytesIO()
         out.save(bytesimg, format=filetype, progressive=False)
         bytesimg = bytesimg.getvalue()
@@ -444,7 +442,7 @@ class gPodderExtension:
             else:
                 self.container.hbox_genre_tag.set_sensitive(False)
                 self.container.strip_album_from_title.set_sensitive(False)
-            
+
             if self.container.config.embed_coverart:
                 self.container.prefer_channel_coverart.set_sensitive(True)
                 self.container.normalize_coverart.set_sensitive(True)
@@ -491,10 +489,10 @@ class gPodderExtension:
     def toggle_normalize_coverart(self, widget):
         self.container.config.normalize_coverart = widget.get_active()
         self.toggle_sensitivity_of_widgets()
-    
+
     def on_episode_coverart_size_changed(self, widget):
         self.container.config.episode_coverart_size = widget.get_value_as_int()
-    
+
     def on_episode_coverart_filetype_changed(self, widget):
         self.container.config.episode_coverart_filetype = widget.get_active()
 
@@ -625,7 +623,7 @@ class gPodderExtension:
         box.pack_start(self.container.hbox_genre_tag, False, False, 0)
 
         box.pack_start(Gtk.HSeparator(), False, False, 0)
-    
+
         self.container.vbox_coverart = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
 
         self.container.embed_coverart = Gtk.CheckButton(_('Embed Coverart'))
@@ -653,9 +651,9 @@ class gPodderExtension:
 
         self.container.episode_coverart_size = Gtk.SpinButton()
         self.container.episode_coverart_size.set_numeric(True)
-        self.container.episode_coverart_size.set_range(100,2000)
+        self.container.episode_coverart_size.set_range(100, 2000)
         self.container.episode_coverart_size.set_digits(0)
-        self.container.episode_coverart_size.set_increments(50,100)
+        self.container.episode_coverart_size.set_increments(50, 100)
         self.container.episode_coverart_size.set_snap_to_ticks(True)
         self.container.episode_coverart_size.set_value(float(self.container.config.episode_coverart_size))
         self.container.episode_coverart_size.set_halign(Gtk.Align.END)
