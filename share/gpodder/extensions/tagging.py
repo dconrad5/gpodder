@@ -158,38 +158,45 @@ class AudioFile(object):
         """Implement the cover art logic in the subclass."""
         None
 
-    def get_cover_picture(self, cover):
-        """Return mutagen Picture class for the cover image.
+    def get_cover_picture(self, cover, mimetype):
+        """Return mutagen FLAC Picture class for the cover image.
 
         Useful for OGG and FLAC format
 
         Picture type = cover image
         see http://flac.sourceforge.net/documentation_tools_flac.html#encoding_options
         """
-        f = open(cover, mode='rb')
         p = Picture()
         p.type = 3
-        p.data = f.read()
-        p.mime = mimetypes.guess_type(cover)[0]
-        f.close()
+        p.data = cover
+        p.mime = mimetype
 
         return p
-
 
 class OggFile(AudioFile):
     def __init__(self, filename, album, title, subtitle, genre, pubDate, cover):
         super(OggFile, self).__init__(filename, album, title, subtitle, genre, pubDate, cover)
 
     def extract_coverart(self):
-        # TODO: oggfile extract_coverart
-        return None
+        audio = File(self.filename, easy=True)
+        try:
+            image = base64.b64decode(str(audio['metadata_block_picture']))
+            image = Picture(image)
+        except:
+            return None
+        else:
+            return image.data
 
     def insert_coverart(self, image=None, mimetype=None):
-        # TODO: oggfile insert_coverart
-        audio = File(self.filename, easy=True)
-        p = self.get_cover_picture(self.cover)
-        audio['METADATA_BLOCK_PICTURE'] = base64.b64encode(p.write())
-        audio.save()
+        if image is not None and mimetype is not None:
+            audio = File(self.filename, easy=True)
+            p = self.get_cover_picture(image, mimetype)
+
+            # VorbisComment METADATA_BLOCK_PICTURE tag
+            # do the dance to encode into base64, then decode into ascii
+            b64encoded = base64.b64encode(p.write())
+            audio['METADATA_BLOCK_PICTURE'] = b64encoded.decode("ascii")
+            audio.save()
 
 class Mp4File(AudioFile):
     def __init__(self, filename, album, title, subtitle, genre, pubDate, cover):
